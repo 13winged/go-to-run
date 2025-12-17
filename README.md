@@ -325,6 +325,4 @@ DEBUG=packages go-to-run --install
 
 # Show execution plan
 go-to-run --dry-run
-```#   g o - t o - r u n 
- 
- 
+```
