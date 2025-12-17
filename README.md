@@ -17,8 +17,6 @@
 - [⚙️ Usage](#️-usage)
 - [🔧 Configuration](#-configuration)
 - [📊 Commands](#-commands)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
 
 ## ✨ Features
 
