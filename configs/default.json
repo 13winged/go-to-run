@@ -1,0 +1,15 @@
+{
+  "system": {
+    "timezone": "Europe/Moscow",
+    "swap_size": "2G"
+  },
+  "security": {
+    "ssh_port": 22,
+    "open_ports": [80, 443],
+    "allow_ips": ["127.0.0.1"]
+  },
+  "packages": {
+    "basic": ["nano", "vim", "git", "curl"],
+    "archive": ["gzip", "gunzip", "zip", "unzip"]
+  }
+}
