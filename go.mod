@@ -1,4 +1,4 @@
-module go-to-run
+module github.com/13winged/go-to-run
 
 go 1.21
 
