@@ -1,59 +1,54 @@
-name: Build and Test
+name: Release
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - 'v*'
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Go
+    - name: Setup Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.21'
     
-    - name: Check structure
+    - name: Build for multiple platforms
       run: |
-        echo "Current directory structure:"
-        find . -type f -name "*.go" | head -20
-        echo ""
-        echo "Creating cmd directory if needed..."
-        mkdir -p cmd/go-to-run
+        # Linux
+        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o go-to-run-linux-amd64 ./cmd/go-to-run
+        GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o go-to-run-linux-arm64 ./cmd/go-to-run
         
-    - name: Build
-      run: |
-        # Пробуем разные пути к main файлу
-        if [ -f cmd/go-to-run/main.go ]; then
-          echo "Building from cmd/go-to-run/main.go"
-          go build -v -o go-to-run ./cmd/go-to-run
-        elif [ -f main.go ]; then
-          echo "Building from main.go"
-          go build -v -o go-to-run .
-        elif [ -f go-to-run.go ]; then
-          echo "Building from go-to-run.go"
-          go build -v -o go-to-run .
-        else
-          echo "No Go files found. Creating minimal example..."
-          cat > main.go << 'EOF'
-package main
-import "fmt"
-func main() { fmt.Println("Hello from Go-to-Run!") }
-EOF
-          go build -v -o go-to-run .
-        fi
+        # Windows
+        GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o go-to-run.exe ./cmd/go-to-run
         
-        # Проверяем что бинарник создан
-        ls -la go-to-run* || echo "Binary not created"
+        # macOS
+        GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o go-to-run-darwin-amd64 ./cmd/go-to-run
+        GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o go-to-run-darwin-arm64 ./cmd/go-to-run
     
-    - name: Run basic test
+    - name: Create release assets
       run: |
-        if [ -f go-to-run ]; then
-          echo "Testing binary..."
-          ./go-to-run --version || ./go-to-run -v || true
-        fi
+        mkdir -p dist
+        tar -czf dist/go-to-run-linux-amd64.tar.gz go-to-run-linux-amd64
+        tar -czf dist/go-to-run-linux-arm64.tar.gz go-to-run-linux-arm64
+        zip dist/go-to-run-windows-amd64.zip go-to-run.exe
+        tar -czf dist/go-to-run-darwin-amd64.tar.gz go-to-run-darwin-amd64
+        tar -czf dist/go-to-run-darwin-arm64.tar.gz go-to-run-darwin-arm64
+        
+        # Create checksums
+        cd dist
+        shasum -a 256 * > checksums.txt
+    
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/go-to-run-linux-amd64.tar.gz
+          dist/go-to-run-linux-arm64.tar.gz
+          dist/go-to-run-windows-amd64.zip
+          dist/go-to-run-darwin-amd64.tar.gz
+          dist/go-to-run-darwin-arm64.tar.gz
+          dist/checksums.txt
