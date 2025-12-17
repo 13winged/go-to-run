@@ -1,8 +1,3 @@
-```markdown
-<p align="center">
-  <img src="https://raw.githubusercontent.com/13winged/go-to-run/main/docs/logo.png" alt="Go-to-Run Логотип" width="200">
-</p>
-
 <h1 align="center">🚀 Go-to-Run</h1>
 <h3 align="center">Кроссплатформенная утилита для настройки Linux систем</h3>
 
