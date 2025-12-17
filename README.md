@@ -1,17 +1,9 @@
-```markdown
-<p align="center">
-  <img src="https://raw.githubusercontent.com/13winged/go-to-run/main/docs/logo.png" alt="Go-to-Run Logo" width="200">
-</p>
-
 <h1 align="center">🚀 Go-to-Run</h1>
 <h3 align="center">Cross-platform Linux System Configuration Utility</h3>
 
 <p align="center">
   <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.21%2B-00ADD8?style=for-the-badge&logo=go" alt="Go Version"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
-  <a href="https://github.com/13winged/go-to-run/actions"><img src="https://img.shields.io/github/actions/workflow/status/13winged/go-to-run/build.yml?style=for-the-badge&logo=github" alt="Build Status"></a>
-  <a href="https://github.com/13winged/go-to-run/releases"><img src="https://img.shields.io/github/v/release/13winged/go-to-run?style=for-the-badge&logo=github" alt="Release"></a>
-  <a href="https://github.com/13winged/go-to-run/stargazers"><img src="https://img.shields.io/github/stars/13winged/go-to-run?style=for-the-badge&logo=github" alt="Stars"></a>
 </p>
 
 <p align="center">
@@ -333,5 +325,6 @@ DEBUG=packages go-to-run --install
 
 # Show execution plan
 go-to-run --dry-run
-```#   g o - t o - r u n  
+```#   g o - t o - r u n 
+ 
  

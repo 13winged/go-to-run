@@ -3,6 +3,7 @@
 
 <p align="center">
   <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.21%2B-00ADD8?style=for-the-badge&logo=go" alt="Версия Go"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
 </p>
 
 <p align="center">
