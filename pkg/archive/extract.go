@@ -1,3 +1,5 @@
+// Package archive предоставляет функционал для работы с архивами различных форматов.
+// Поддерживает извлечение, создание и проверку архивов.
 package archive
 
 import (
@@ -6,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/briandowns/spinner"
 )
@@ -13,8 +16,8 @@ import (
 // ExtractManager управляет извлечением архивов
 type ExtractManager struct{}
 
-// ArchiveInfo содержит информацию об архиве
-type ArchiveInfo struct {
+// Info содержит информацию об архиве
+type Info struct {
 	Path     string
 	Size     int64
 	Type     string
@@ -32,25 +35,25 @@ func (em *ExtractManager) SupportedFormats() []string {
 }
 
 // GetArchiveInfo возвращает информацию об архиве
-func (em *ExtractManager) GetArchiveInfo(filepath string) (*ArchiveInfo, error) {
-	info := &ArchiveInfo{
-		Path: filepath,
+func (em *ExtractManager) GetArchiveInfo(filePath string) (*Info, error) {
+	info := &Info{
+		Path: filePath,
 	}
 
 	// Получаем размер файла
-	if stat, err := os.Stat(filepath); err == nil {
+	if stat, err := os.Stat(filePath); err == nil {
 		info.Size = stat.Size()
 	}
 
 	// Определяем тип архива
-	info.Type = em.detectArchiveType(filepath)
+	info.Type = em.detectArchiveType(filePath)
 
 	// Проверяем валидность архива
-	info.IsValid = em.checkArchiveValidity(filepath)
+	info.IsValid = em.checkArchiveValidity(filePath)
 
 	// Получаем список содержимого (если возможно)
 	if info.IsValid {
-		info.Contents = em.listArchiveContents(filepath)
+		info.Contents = em.listArchiveContents(filePath)
 	}
 
 	return info, nil
@@ -67,8 +70,8 @@ func (em *ExtractManager) Extract(archivePath, outputDir string, showProgress bo
 		outputDir = em.getDefaultOutputDir(archivePath)
 	}
 
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("ошибка создания директории: %v", err)
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
+		return fmt.Errorf("ошибка создания директории: %w", err)
 	}
 
 	if showProgress {
@@ -93,7 +96,7 @@ func (em *ExtractManager) ExtractAll(archives []string, outputDir string, showPr
 
 		subDir := filepath.Join(outputDir, strings.TrimSuffix(filepath.Base(archive), filepath.Ext(archive)))
 		if err := em.Extract(archive, subDir, false); err != nil {
-			return fmt.Errorf("ошибка извлечения %s: %v", archive, err)
+			return fmt.Errorf("ошибка извлечения %s: %w", archive, err)
 		}
 	}
 
@@ -144,18 +147,18 @@ func (em *ExtractManager) CheckTools() map[string]bool {
 
 // Helper методы
 
-func (em *ExtractManager) isArchive(filepath string) bool {
-	ext := strings.ToLower(filepath.Ext(filepath))
+func (em *ExtractManager) isArchive(filePath string) bool {
+	filename := strings.ToLower(filePath)
 	for _, format := range em.SupportedFormats() {
-		if strings.HasSuffix(filepath, format) {
+		if strings.HasSuffix(filename, format) {
 			return true
 		}
 	}
 	return false
 }
 
-func (em *ExtractManager) detectArchiveType(filepath string) string {
-	filename := strings.ToLower(filepath)
+func (em *ExtractManager) detectArchiveType(filePath string) string {
+	filename := strings.ToLower(filePath)
 
 	switch {
 	case strings.HasSuffix(filename, ".tar.gz") || strings.HasSuffix(filename, ".tgz"):
@@ -193,22 +196,22 @@ func (em *ExtractManager) detectArchiveType(filepath string) string {
 	}
 }
 
-func (em *ExtractManager) checkArchiveValidity(filepath string) bool {
-	archiveType := em.detectArchiveType(filepath)
+func (em *ExtractManager) checkArchiveValidity(filePath string) bool {
+	archiveType := em.detectArchiveType(filePath)
 
 	switch archiveType {
 	case "tar.gz", "tgz", "tar.bz2", "tbz2", "tar.xz", "txz", "tar":
-		cmd := exec.Command("tar", "-tf", filepath)
+		cmd := exec.Command("tar", "-tf", filePath)
 		return cmd.Run() == nil
 	case "gz":
-		cmd := exec.Command("gunzip", "-t", filepath)
+		cmd := exec.Command("gunzip", "-t", filePath)
 		return cmd.Run() == nil
 	case "zip":
-		cmd := exec.Command("unzip", "-t", filepath)
+		cmd := exec.Command("unzip", "-t", filePath)
 		return cmd.Run() == nil
 	case "rar":
 		if em.commandExists("unrar") {
-			cmd := exec.Command("unrar", "t", filepath)
+			cmd := exec.Command("unrar", "t", filePath)
 			return cmd.Run() == nil
 		}
 		return true // Предполагаем валидным если нет unrar
@@ -217,17 +220,17 @@ func (em *ExtractManager) checkArchiveValidity(filepath string) bool {
 	}
 }
 
-func (em *ExtractManager) listArchiveContents(filepath string) []string {
-	archiveType := em.detectArchiveType(filepath)
+func (em *ExtractManager) listArchiveContents(filePath string) []string {
+	archiveType := em.detectArchiveType(filePath)
 
 	switch archiveType {
 	case "tar.gz", "tgz", "tar.bz2", "tbz2", "tar.xz", "txz", "tar":
-		cmd := exec.Command("tar", "-tf", filepath)
+		cmd := exec.Command("tar", "-tf", filePath)
 		if output, err := cmd.Output(); err == nil {
 			return strings.Split(strings.TrimSpace(string(output)), "\n")
 		}
 	case "zip":
-		cmd := exec.Command("unzip", "-l", filepath)
+		cmd := exec.Command("unzip", "-l", filePath)
 		if output, err := cmd.Output(); err == nil {
 			lines := strings.Split(string(output), "\n")
 			if len(lines) > 3 {
@@ -281,17 +284,23 @@ func (em *ExtractManager) extractArchive(archivePath, outputDir string) error {
 	case "rar":
 		return em.extractRar(archivePath, outputDir)
 	case "7z":
-		return em.extract7z(archivePath, outputDir)
+		return safeExecCommand("7z", "x", archivePath, "-o"+outputDir)
 	case "lz4":
-		return em.extractLz4(archivePath, outputDir)
+		filename := filepath.Base(archivePath)
+		outputFile := filepath.Join(outputDir, strings.TrimSuffix(filename, ".lz4"))
+		return safeExecCommand("lz4", "-d", archivePath, outputFile)
 	case "zst":
-		return em.extractZstd(archivePath, outputDir)
+		filename := filepath.Base(archivePath)
+		outputFile := filepath.Join(outputDir, strings.TrimSuffix(filename, ".zst"))
+		return safeExecCommand("zstd", "-d", archivePath, "-o", outputFile)
 	case "lzop":
-		return em.extractLzop(archivePath, outputDir)
+		filename := filepath.Base(archivePath)
+		outputFile := filepath.Join(outputDir, strings.TrimSuffix(filename, ".lzop"))
+		return safeExecCommand("lzop", "-d", archivePath, "-o", outputFile)
 	case "tar.zst":
-		return em.extractTarZstd(archivePath, outputDir)
+		return safeExecCommand("tar", "--zstd", "-xf", archivePath, "-C", outputDir)
 	case "tar.lz4":
-		return em.extractTarLz4(archivePath, outputDir)
+		return safeExecCommand("tar", "--lz4", "-xf", archivePath, "-C", outputDir)
 	default:
 		return fmt.Errorf("неподдерживаемый формат архива: %s", archiveType)
 	}
@@ -322,40 +331,40 @@ func (em *ExtractManager) extractTar(archivePath, outputDir string) error {
 func (em *ExtractManager) extractGz(archivePath, outputDir string) error {
 	filename := filepath.Base(archivePath)
 	outputFile := filepath.Join(outputDir, strings.TrimSuffix(filename, ".gz"))
-	
+
 	cmd := exec.Command("gunzip", "-c", archivePath)
 	output, err := cmd.Output()
 	if err != nil {
 		return err
 	}
-	
-	return os.WriteFile(outputFile, output, 0644)
+
+	return os.WriteFile(outputFile, output, 0600)
 }
 
 func (em *ExtractManager) extractBz2(archivePath, outputDir string) error {
 	filename := filepath.Base(archivePath)
 	outputFile := filepath.Join(outputDir, strings.TrimSuffix(filename, ".bz2"))
-	
+
 	cmd := exec.Command("bunzip2", "-c", archivePath)
 	output, err := cmd.Output()
 	if err != nil {
 		return err
 	}
-	
-	return os.WriteFile(outputFile, output, 0644)
+
+	return os.WriteFile(outputFile, output, 0600)
 }
 
 func (em *ExtractManager) extractXz(archivePath, outputDir string) error {
 	filename := filepath.Base(archivePath)
 	outputFile := filepath.Join(outputDir, strings.TrimSuffix(filename, ".xz"))
-	
+
 	cmd := exec.Command("xz", "-d", "-c", archivePath)
 	output, err := cmd.Output()
 	if err != nil {
 		return err
 	}
-	
-	return os.WriteFile(outputFile, output, 0644)
+
+	return os.WriteFile(outputFile, output, 0600)
 }
 
 func (em *ExtractManager) extractZip(archivePath, outputDir string) error {
@@ -368,85 +377,53 @@ func (em *ExtractManager) extractRar(archivePath, outputDir string) error {
 	return cmd.Run()
 }
 
-func (em *ExtractManager) extract7z(archivePath, outputDir string) error {
-	cmd := exec.Command("7z", "x", archivePath, "-o"+outputDir)
-	return cmd.Run()
-}
-
-func (em *ExtractManager) extractLz4(archivePath, outputDir string) error {
-	filename := filepath.Base(archivePath)
-	outputFile := filepath.Join(outputDir, strings.TrimSuffix(filename, ".lz4"))
-	
-	cmd := exec.Command("lz4", "-d", archivePath, outputFile)
-	return cmd.Run()
-}
-
-func (em *ExtractManager) extractZstd(archivePath, outputDir string) error {
-	filename := filepath.Base(archivePath)
-	outputFile := filepath.Join(outputDir, strings.TrimSuffix(filename, ".zst"))
-	
-	cmd := exec.Command("zstd", "-d", archivePath, "-o", outputFile)
-	return cmd.Run()
-}
-
-func (em *ExtractManager) extractLzop(archivePath, outputDir string) error {
-	filename := filepath.Base(archivePath)
-	outputFile := filepath.Join(outputDir, strings.TrimSuffix(filename, ".lzop"))
-	
-	cmd := exec.Command("lzop", "-d", archivePath, "-o", outputFile)
-	return cmd.Run()
-}
-
-func (em *ExtractManager) extractTarZstd(archivePath, outputDir string) error {
-	cmd := exec.Command("tar", "--zstd", "-xf", archivePath, "-C", outputDir)
-	return cmd.Run()
-}
-
-func (em *ExtractManager) extractTarLz4(archivePath, outputDir string) error {
-	cmd := exec.Command("tar", "--lz4", "-xf", archivePath, "-C", outputDir)
-	return cmd.Run()
-}
-
 // Методы создания архивов
 
 func (em *ExtractManager) createTarGz(files []string, outputPath string) error {
 	args := []string{"-czf", outputPath}
 	args = append(args, files...)
-	cmd := exec.Command("tar", args...)
-	return cmd.Run()
+	return safeExecCommand("tar", args...)
 }
 
 func (em *ExtractManager) createZip(files []string, outputPath string) error {
 	args := []string{outputPath}
 	args = append(args, files...)
-	cmd := exec.Command("zip", args...)
-	return cmd.Run()
+	return safeExecCommand("zip", args...)
 }
 
 func (em *ExtractManager) createTarBz2(files []string, outputPath string) error {
 	args := []string{"-cjf", outputPath}
 	args = append(args, files...)
-	cmd := exec.Command("tar", args...)
-	return cmd.Run()
+	return safeExecCommand("tar", args...)
 }
 
 func (em *ExtractManager) createTarXz(files []string, outputPath string) error {
 	args := []string{"-cJf", outputPath}
 	args = append(args, files...)
-	cmd := exec.Command("tar", args...)
-	return cmd.Run()
+	return safeExecCommand("tar", args...)
 }
 
 func (em *ExtractManager) create7z(files []string, outputPath string) error {
 	args := []string{"a", outputPath}
 	args = append(args, files...)
-	cmd := exec.Command("7z", args...)
-	return cmd.Run()
+	return safeExecCommand("7z", args...)
 }
 
 func (em *ExtractManager) commandExists(cmd string) bool {
 	_, err := exec.LookPath(cmd)
 	return err == nil
+}
+
+// safeExecCommand безопасно выполняет команду с проверкой аргументов
+func safeExecCommand(name string, arg ...string) error {
+	// Проверяем наличие команды
+	if _, err := exec.LookPath(name); err != nil {
+		return fmt.Errorf("команда %s не найдена: %w", name, err)
+	}
+
+	// Создаем команду с явными аргументами
+	cmd := exec.Command(name, arg...)
+	return cmd.Run()
 }
 
 // ExtractFunction предоставляет функцию извлечения для использования в скриптах
@@ -455,17 +432,4 @@ func ExtractFunction() func(string) error {
 		em := &ExtractManager{}
 		return em.Extract(archivePath, "", true)
 	}
-}
-
-// ServiceInfo представляет информацию о службе (для table.go)
-type ServiceInfo struct {
-	Name        string
-	Status      string
-	AutoStart   bool
-	Description string
-}
-
-// sortStrings сортирует строки (для table.go)
-func sortStrings(strings []string) {
-	sort.Strings(strings)
 }

@@ -1,0 +1,35 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck           # Проверяет необработанные ошибки
+    - govet              # Проверяет подозрительные конструкции
+    - staticcheck        # Статический анализ (включает проверки упрощения)
+    - unused             # Находит неиспользуемый код
+    - ineffassign        # Обнаруживает неэффективные присваивания
+    - gosec              # Проверка безопасности
+    - misspell           # Поиск орфографических ошибок
+    - revive             # Замена golint (стилевые проверки)
+    
+    # Дополнительные полезные линтеры
+    - gocritic           # Критический анализ кода (более строгий)
+    - errorlint          # Проверка ошибок Go 1.13+
+    - perfsprint         # Оптимизация fmt.Sprintf
+
+  # Отключаем слишком строгие для начала
+  disable:
+    - gocyclo           # Слишком сложные функции
+    - funlen            # Слишком длинные функции
+    - wsl_v5            # Правила пробелов (может быть строгим)
+    - nestif            # Слишком вложенные if
+
+run:
+  timeout: 5m
+  skip-dirs:
+    - vendor
+    - .git
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true

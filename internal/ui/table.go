@@ -1,12 +1,25 @@
+// Package ui предоставляет утилиты для отображения таблиц в терминале.
+// Включает функционал для создания стилизованных таблиц с цветами и рамками.
 package ui
 
 import (
 	"fmt"
 	"os"
-	"strings"
+	"sort"
+	"strconv"
 
 	"github.com/olekukonko/tablewriter"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
+
+// ServiceInfo содержит информацию о службе
+type ServiceInfo struct {
+	Name        string
+	Status      string
+	AutoStart   bool
+	Description string
+}
 
 // TableManager управляет таблицами
 type TableManager struct{}
@@ -64,7 +77,7 @@ func (tm *TableManager) DisplaySystemInfo(info map[string]string) {
 	for k := range info {
 		keys = append(keys, k)
 	}
-	sortStrings(keys)
+	sort.Strings(keys)
 
 	// Добавляем данные
 	for _, key := range keys {
@@ -94,7 +107,7 @@ func (tm *TableManager) DisplayPackages(packages []string, category string) {
 	)
 
 	for i, pkg := range packages {
-		table.Append([]string{fmt.Sprintf("%d", i+1), pkg, category})
+		table.Append([]string{strconv.Itoa(i + 1), pkg, category})
 	}
 
 	fmt.Printf("\nПакеты в категории '%s':\n", category)
@@ -134,9 +147,10 @@ func (tm *TableManager) DisplayCategories(categories map[string][]string) {
 		if desc == "" {
 			desc = "Без описания"
 		}
+		caser := cases.Title(language.Russian)
 		table.Append([]string{
-			strings.Title(category),
-			fmt.Sprintf("%d", len(packages)),
+			caser.String(category),
+			strconv.Itoa(len(packages)),
 			desc,
 		})
 	}
@@ -157,9 +171,10 @@ func (tm *TableManager) DisplayServices(services []ServiceInfo) {
 
 	for _, service := range services {
 		statusColor := tablewriter.FgHiRedColor
-		if service.Status == "active" {
+		switch service.Status {
+		case "active":
 			statusColor = tablewriter.FgHiGreenColor
-		} else if service.Status == "inactive" {
+		case "inactive":
 			statusColor = tablewriter.FgHiYellowColor
 		}
 
@@ -177,4 +192,10 @@ func (tm *TableManager) DisplayServices(services []ServiceInfo) {
 			{tablewriter.Bold, tablewriter.FgHiWhiteColor},
 			{tablewriter.Bold, statusColor},
 			{},
-			
+			{tablewriter.FgHiCyanColor},
+		})
+	}
+
+	fmt.Println("\nСистемные службы:")
+	table.Render()
+}
