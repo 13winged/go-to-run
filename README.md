@@ -1,46 +1,45 @@
-<h1 align="center">🚀 Go-to-Run</h1>
-<h3 align="center">Cross-platform Linux System Configuration Utility</h3>
+# 🚀 Go-to-Run
 
-<p align="center">
-  <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.21%2B-00ADD8?style=for-the-badge&logo=go" alt="Go Version"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
-</p>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/13winged/go-to-run/main/docs/demo.gif" alt="Demo" width="600">
-</p>
+### Cross-platform Linux System Configuration Utility
 
 ## 📋 Table of Contents
-- [✨ Features](#-features)
-- [🚀 Quick Start](#-quick-start)
-- [📦 Installation](#-installation)
-- [⚙️ Usage](#️-usage)
-- [🔧 Configuration](#-configuration)
-- [📊 Commands](#-commands)
+
+* ✨ Features
+* 🚀 Quick Start
+* 📦 Installation
+* ⚙️ Usage
+* 🔧 Configuration
+* 📊 Commands
 
 ## ✨ Features
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| 🚀 **Cross-platform** | Supports 6+ Linux distributions | ✅ |
-| ⚡ **Auto-detection** | Detects distro & package manager automatically | ✅ |
-| 🔒 **Security** | UFW, Fail2Ban, SSH hardening | ✅ |
-| 📦 **Smart Install** | Parallel package installation with progress | ✅ |
-| 🎨 **Beautiful UI** | Colored output, tables, spinners | ✅ |
-| 🔄 **Backup/Restore** | Configuration backup system | ✅ |
-| 🔧 **Extensible** | Easy to add packages & features | ✅ |
+Feature | Description | Status  
+---|---|---  
+🚀 **Cross-platform** | Supports 6+ Linux distributions |  
+⚡ **Auto-detection** | Detects distro & package manager automatically |  
+🔒 **Security** | UFW, Fail2Ban, SSH hardening | 
+📦 **Smart Install** | Parallel package installation with progress |  
+🎨 **Beautiful UI** | Colored output, tables, spinners | 
+📊 **System Dashboard** | MOTD-style system status dashboard |   
+🔄 **Backup/Restore** | Configuration backup system | 
+🔧 **Extensible** | Easy to add packages & features |   
 
 ## 🚀 Quick Start
 
 ### One-line Installation
+
 ```bash
 curl -sSL https://raw.githubusercontent.com/13winged/go-to-run/main/scripts/install.sh | bash
 ```
 
 ### Basic Usage
+
 ```bash
 # Full system setup
 sudo go-to-run
+
+# Show system dashboard
+go-to-run dashboard
 
 # Show system info
 go-to-run --info
@@ -52,6 +51,7 @@ sudo go-to-run --update
 ## 📦 Installation
 
 ### Option 1: Install Script (Recommended)
+
 ```bash
 # Linux/macOS
 curl -sSL https://raw.githubusercontent.com/13winged/go-to-run/main/scripts/install.sh | bash
@@ -61,6 +61,7 @@ curl -sSL https://raw.githubusercontent.com/13winged/go-to-run/main/scripts/inst
 ```
 
 ### Option 2: From Source
+
 ```bash
 git clone https://github.com/13winged/go-to-run.git
 cd go-to-run
@@ -69,11 +70,13 @@ sudo make install
 ```
 
 ### Option 3: Docker
+
 ```bash
 docker run --rm -it --privileged 13winged/go-to-run:latest
 ```
 
 ### Option 4: Package Managers
+
 ```bash
 # Arch Linux (AUR)
 yay -S go-to-run
@@ -85,9 +88,13 @@ brew install 13winged/tap/go-to-run
 ## ⚙️ Usage
 
 ### Basic Examples
+
 ```bash
 # Full system setup with default settings
 sudo go-to-run
+
+# Show system dashboard
+go-to-run dashboard
 
 # Install specific package categories
 sudo go-to-run --install --categories=basic,development,network
@@ -100,6 +107,7 @@ sudo go-to-run --clean
 ```
 
 ### Advanced Examples
+
 ```bash
 # Custom configuration file
 sudo go-to-run --config /path/to/config.json
@@ -114,22 +122,25 @@ sudo go-to-run --open-ports 80,443,3000,8080 --allow-ips 192.168.1.0/24
 ## 🔧 Configuration
 
 ### Command Line Flags
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--config` | Configuration file | `go-to-run.json` |
-| `--timezone` | System timezone | `Europe/Moscow` |
-| `--swap` | Swap size | Auto-calculated |
-| `--ssh-port` | SSH port | `22` |
-| `--open-ports` | Additional open ports | `80,443` |
-| `--categories` | Package categories | `basic,archive,network,monitoring,system` |
-| `--update, -u` | Update system only | `false` |
-| `--install, -i` | Install packages only | `false` |
-| `--security, -s` | Security setup only | `false` |
-| `--info` | Show system information | `false` |
-| `--clean, -c` | Clean system only | `false` |
+
+Flag | Description | Default  
+---|---|---  
+`--config` | Configuration file | `go-to-run.json`  
+`--timezone` | System timezone | `Europe/Moscow`  
+`--swap` | Swap size | Auto-calculated  
+`--ssh-port` | SSH port | `22`  
+`--open-ports` | Additional open ports | `80,443`  
+`--categories` | Package categories | `basic,archive,network,monitoring,system`  
+`--update, -u` | Update system only | `false`  
+`--install, -i` | Install packages only | `false`  
+`--security, -s` | Security setup only | `false`  
+`--info` | Show system information | `false`  
+`--clean, -c` | Clean system only | `false`  
 
 ### Configuration File Example
+
 Create `go-to-run.json`:
+
 ```json
 {
   "system": {
@@ -162,7 +173,11 @@ Create `go-to-run.json`:
 ## 📊 Commands
 
 ### Main Commands
+
 ```bash
+# Show system dashboard
+go-to-run dashboard
+
 # Check system status
 sudo go-to-run check
 
@@ -182,7 +197,23 @@ go-to-run categories
 go-to-run version
 ```
 
+### System Dashboard
+
+The `dashboard` command provides a comprehensive MOTD-style overview of your system:
+
+```bash
+go-to-run dashboard
+```
+
+**Shows:**
+- 📊 **System Information**: Hostname, OS, kernel, uptime, CPU load, memory usage
+- 🛡️ **Security Status**: SSH, UFW, Fail2Ban status and configuration
+- ⚙️ **Configuration**: Current go-to-run settings (timezone, ports, packages)
+- 📦 **Updates**: Available package updates
+- 🚀 **Quick Actions**: Common commands for system management
+
 ### Package Management
+
 ```bash
 # List installed packages
 go-to-run packages list
@@ -198,6 +229,7 @@ sudo go-to-run packages remove package-name
 ```
 
 ### System Information
+
 ```bash
 # Full system report
 go-to-run info
@@ -216,13 +248,15 @@ go-to-run info processes
 ```
 
 ## 📁 Project Structure
+
 ```
 go-to-run/
 ├── cmd/go-to-run/          # Main application
 ├── internal/               # Internal packages
 │   ├── config/            # Configuration management
 │   ├── system/            # System operations
-│   └── ui/                # User interface
+│   ├── ui/                # User interface
+│   └── dashboard/         # System dashboard
 ├── pkg/archive/           # Archive utilities
 ├── configs/               # Configuration files
 ├── scripts/               # Installation scripts
@@ -233,6 +267,7 @@ go-to-run/
 ```
 
 ## 🏗️ Architecture
+
 ```mermaid
 graph TB
     A[User Input] --> B[CLI Parser]
@@ -250,27 +285,35 @@ graph TB
     I --> J
     
     J --> K[Results Output]
+    
+    L[Dashboard] --> M[System Info]
+    L --> N[Security Status]
+    L --> O[Config Overview]
+    L --> P[Updates Info]
 ```
 
 ## 📈 Performance
 
-| Operation | Time (Avg) | Packages |
-|-----------|------------|----------|
-| System Update | 2-5 min | N/A |
-| Package Install | 30-60 sec | 50 packages |
-| Security Setup | 10-20 sec | N/A |
-| Full Setup | 5-10 min | All categories |
+Operation | Time (Avg) | Packages  
+---|---|---  
+System Update | 2-5 min | N/A  
+Package Install | 30-60 sec | 50 packages  
+Security Setup | 10-20 sec | N/A  
+Full Setup | 5-10 min | All categories  
+Dashboard Display | < 1 sec | N/A  
 
 ## 🤝 Contributing
 
 We love contributions! Here's how to help:
 
 ### Bug Reports & Feature Requests
-- Check existing issues first
-- Use issue templates
-- Provide system info and logs
+
+* Check existing issues first
+* Use issue templates
+* Provide system info and logs
 
 ### Development Setup
+
 ```bash
 # Fork & clone
 git clone https://github.com/YOUR_USERNAME/go-to-run.git
@@ -290,13 +333,15 @@ make build
 ```
 
 ### Code Guidelines
-- Use Go 1.21+ features
-- Write tests for new functionality
-- Update documentation
-- Follow Go conventions
-- Use conventional commits
+
+* Use Go 1.21+ features
+* Write tests for new functionality
+* Update documentation
+* Follow Go conventions
+* Use conventional commits
 
 ### Pull Request Process
+
 1. Fork the repository
 2. Create feature branch
 3. Add tests and documentation
@@ -306,14 +351,16 @@ make build
 ## 🐛 Troubleshooting
 
 ### Common Issues
-| Issue | Solution |
-|-------|----------|
-| Permission denied | Use `sudo` |
-| Package not found | Check distro support |
-| Network error | Check internet connection |
-| Config parse error | Validate JSON syntax |
+
+Issue | Solution  
+---|---  
+Permission denied | Use `sudo`  
+Package not found | Check distro support  
+Network error | Check internet connection  
+Config parse error | Validate JSON syntax  
 
 ### Debug Mode
+
 ```bash
 # Enable verbose output
 go-to-run --verbose
