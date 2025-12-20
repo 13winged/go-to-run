@@ -1,12 +1,13 @@
+// Package system предоставляет функциональность для работы с системой.
 package system
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
-	"runtime"
 	"sort"
 	"strings"
-	"sync"
+	"time"
 
 	"github.com/briandowns/spinner"
 	"github.com/schollz/progressbar/v3"
@@ -117,37 +118,37 @@ var (
 	}
 )
 
-// DetectPackageManager определяет менеджер пакетов системы
+// Detect определяет менеджер пакетов системы
 func (d *PackageManagerDetector) Detect() (*PackageManager, error) {
 	for cmd, pm := range packageManagers {
 		if commandExists(cmd) {
 			return &pm, nil
 		}
 	}
-	return nil, fmt.Errorf("не найден поддерживаемый менеджер пакетов")
+	return nil, errors.New("не найден поддерживаемый менеджер пакетов")
 }
 
 // IsPackageInstalled проверяет установлен ли пакет
 func IsPackageInstalled(pm *PackageManager, pkg string) (bool, error) {
 	switch pm.Name {
 	case "apt":
-		cmd := fmt.Sprintf("dpkg-query -W -f='${Status}' %s 2>/dev/null | grep -q 'install ok installed'", pkg)
+		cmd := "dpkg-query -W -f='${Status}' " + pkg + " 2>/dev/null | grep -q 'install ok installed'"
 		_, err := exec.Command("sh", "-c", cmd).Output()
 		return err == nil, nil
 	case "dnf", "yum":
-		cmd := fmt.Sprintf("rpm -q %s", pkg)
+		cmd := "rpm -q " + pkg
 		_, err := exec.Command("sh", "-c", cmd).Output()
 		return err == nil, nil
 	case "pacman":
-		cmd := fmt.Sprintf("pacman -Qs ^%s$", pkg)
+		cmd := "pacman -Qs ^" + pkg + "$"
 		output, err := exec.Command("sh", "-c", cmd).Output()
 		return err == nil && strings.Contains(string(output), pkg), nil
 	case "apk":
-		cmd := fmt.Sprintf("apk info -e %s", pkg)
+		cmd := "apk info -e " + pkg
 		_, err := exec.Command("sh", "-c", cmd).Output()
 		return err == nil, nil
 	case "zypper":
-		cmd := fmt.Sprintf("rpm -q %s", pkg)
+		cmd := "rpm -q " + pkg
 		_, err := exec.Command("sh", "-c", cmd).Output()
 		return err == nil, nil
 	default:
@@ -166,7 +167,7 @@ func InstallPackages(pm *PackageManager, packages []string, showProgress bool) e
 	for _, pkg := range packages {
 		installed, err := IsPackageInstalled(pm, pkg)
 		if err != nil {
-			return err
+			return fmt.Errorf("ошибка проверки пакета %s: %w", pkg, err)
 		}
 		if !installed {
 			toInstall = append(toInstall, pkg)
@@ -200,51 +201,60 @@ func installWithProgress(pm *PackageManager, packages []string) error {
 
 	// Для некоторых менеджеров устанавливаем все сразу
 	if pm.Name == "apt" || pm.Name == "dnf" || pm.Name == "yum" {
-		cmd := fmt.Sprintf("%s %s", pm.Install, strings.Join(packages, " "))
+		installCmd := pm.Install + " " + strings.Join(packages, " ")
 		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 		s.Suffix = " Установка пакетов..."
 		s.Start()
 
-		if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
+		cmd := exec.Command("sh", "-c", installCmd)
+		if err := cmd.Run(); err != nil {
 			s.Stop()
 			// Пробуем установить по одному
 			for _, pkg := range packages {
-				cmd := fmt.Sprintf("%s %s", pm.Install, pkg)
-				if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
-					return fmt.Errorf("ошибка установки %s: %v", pkg, err)
+				cmdStr := pm.Install + " " + pkg
+				cmd := exec.Command("sh", "-c", cmdStr)
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("ошибка установки %s: %w", pkg, err)
 				}
-				bar.Add(1)
+				// Игнорируем ошибки прогресс-бара
+				_ = bar.Add(1)
 			}
 		} else {
 			s.Stop()
-			bar.Add(len(packages))
+			// Игнорируем ошибки прогресс-бара
+			_ = bar.Add(len(packages))
 		}
 	} else {
 		// Для других менеджеров устанавливаем по одному
 		for _, pkg := range packages {
-			cmd := fmt.Sprintf("%s %s", pm.Install, pkg)
-			if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
-				return fmt.Errorf("ошибка установки %s: %v", pkg, err)
+			cmdStr := pm.Install + " " + pkg
+			cmd := exec.Command("sh", "-c", cmdStr)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("ошибка установки %s: %w", pkg, err)
 			}
-			bar.Add(1)
+			// Игнорируем ошибки прогресс-бара
+			_ = bar.Add(1)
 		}
 	}
 
-	bar.Finish()
+	// Игнорируем ошибки завершения
+	_ = bar.Finish()
 	return nil
 }
 
 func installWithoutProgress(pm *PackageManager, packages []string) error {
 	if pm.Name == "apt" || pm.Name == "dnf" || pm.Name == "yum" {
-		cmd := fmt.Sprintf("%s %s", pm.Install, strings.Join(packages, " "))
-		return exec.Command("sh", "-c", cmd).Run()
+		cmdStr := pm.Install + " " + strings.Join(packages, " ")
+		cmd := exec.Command("sh", "-c", cmdStr)
+		return cmd.Run()
 	}
 
 	// Для других менеджеров устанавливаем по одному
 	for _, pkg := range packages {
-		cmd := fmt.Sprintf("%s %s", pm.Install, pkg)
-		if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
-			return fmt.Errorf("ошибка установки %s: %v", pkg, err)
+		cmdStr := pm.Install + " " + pkg
+		cmd := exec.Command("sh", "-c", cmdStr)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("ошибка установки %s: %w", pkg, err)
 		}
 	}
 	return nil
@@ -257,9 +267,10 @@ func UpdateSystem(pm *PackageManager) error {
 	s.Suffix = " Обновление списка пакетов..."
 	s.Start()
 
-	if err := exec.Command("sh", "-c", pm.Update).Run(); err != nil {
+	updateCmd := exec.Command("sh", "-c", pm.Update)
+	if err := updateCmd.Run(); err != nil {
 		s.Stop()
-		return fmt.Errorf("ошибка обновления списка пакетов: %v", err)
+		return fmt.Errorf("ошибка обновления списка пакетов: %w", err)
 	}
 	s.Stop()
 
@@ -268,9 +279,10 @@ func UpdateSystem(pm *PackageManager) error {
 	s.Suffix = " Обновление пакетов..."
 	s.Start()
 
-	if err := exec.Command("sh", "-c", pm.Upgrade).Run(); err != nil {
+	upgradeCmd := exec.Command("sh", "-c", pm.Upgrade)
+	if err := upgradeCmd.Run(); err != nil {
 		s.Stop()
-		return fmt.Errorf("ошибка обновления пакетов: %v", err)
+		return fmt.Errorf("ошибка обновления пакетов: %w", err)
 	}
 	s.Stop()
 
@@ -279,14 +291,16 @@ func UpdateSystem(pm *PackageManager) error {
 
 // CleanSystem очищает систему
 func CleanSystem(pm *PackageManager) error {
-	return exec.Command("sh", "-c", pm.Clean).Run()
+	cleanCmd := exec.Command("sh", "-c", pm.Clean)
+	return cleanCmd.Run()
 }
 
 // GetAvailableUpdates возвращает список доступных обновлений
 func GetAvailableUpdates(pm *PackageManager) ([]string, error) {
-	output, err := exec.Command("sh", "-c", pm.Check).Output()
+	checkCmd := exec.Command("sh", "-c", pm.Check)
+	output, err := checkCmd.Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ошибка получения обновлений: %w", err)
 	}
 
 	var updates []string
@@ -332,7 +346,7 @@ func FilterInstalledPackages(pm *PackageManager, packages []string) ([]string, [
 	for _, pkg := range packages {
 		isInstalled, err := IsPackageInstalled(pm, pkg)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("ошибка проверки пакета %s: %w", pkg, err)
 		}
 		if isInstalled {
 			installed = append(installed, pkg)

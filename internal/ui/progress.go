@@ -183,9 +183,9 @@ func (pm *ProgressManager) ColorProgressBar(total int, description, color string
 
 // StepProgress представляет пошаговый прогресс
 type StepProgress struct {
-	totalSteps int
+	totalSteps  int
 	currentStep int
-	bar        *progressbar.ProgressBar
+	bar         *progressbar.ProgressBar
 }
 
 // NewStepProgress создает новый пошаговый прогресс
@@ -212,7 +212,7 @@ func (sp *StepProgress) SetStep(step int) error {
 	if step < 0 || step > sp.totalSteps {
 		return fmt.Errorf("неверный номер шага: %d", step)
 	}
-	
+
 	diff := step - sp.currentStep
 	if diff > 0 {
 		sp.currentStep = step
@@ -281,7 +281,7 @@ func (pm *ProgressManager) ParallelProgress(tasks []func() error, description st
 	for i := 0; i < len(tasks); i++ {
 		result := <-results
 		if result.err != nil {
-			errors = append(errors, fmt.Errorf("задача %d: %v", result.index, result.err))
+			errors = append(errors, fmt.Errorf("задача %d: %w", result.index, result.err))
 		}
 		bar.Add(1)
 	}

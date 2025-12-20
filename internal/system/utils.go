@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
@@ -244,7 +243,7 @@ func (su *SystemUtils) createSwapFile(swapFile, size string) error {
 	cmd := fmt.Sprintf("fallocate -l %s %s", size, swapFile)
 	if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
 		// fallocate может не работать, используем dd
-		cmd = fmt.Sprintf("dd if=/dev/zero of=%s bs=1M count=%s status=progress", 
+		cmd = fmt.Sprintf("dd if=/dev/zero of=%s bs=1M count=%s status=progress",
 			swapFile, strings.TrimSuffix(size, "G"))
 		if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
 			return fmt.Errorf("ошибка создания swap файла: %v", err)
@@ -351,9 +350,11 @@ func (su *SystemUtils) RunCommandOutput(name string, args ...string) (string, er
 	cmd := exec.Command(name, args...)
 	output, err := cmd.Output()
 	if err != nil {
+		var stderr []byte
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return string(output), fmt.Errorf("%s: %s", exitErr.Error(), string(exitErr.Stderr))
+			stderr = exitErr.Stderr
 		}
+		return string(output), fmt.Errorf("%w: %s", err, string(stderr))
 	}
 	return string(output), err
 }
@@ -390,11 +391,6 @@ func detectDistro() (string, string, error) {
 	return "unknown", "unknown", nil
 }
 
-func commandExists(cmd string) bool {
-	_, err := exec.LookPath(cmd)
-	return err == nil
-}
-
 func parseBytes(s string) (uint64, error) {
 	var multiplier uint64 = 1
 	s = strings.ToUpper(s)
@@ -419,7 +415,7 @@ func parseBytes(s string) (uint64, error) {
 	return value * multiplier, nil
 }
 
-func min(a, b int) int {
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}

@@ -2,9 +2,10 @@ package system
 
 import (
 	"fmt"
+	"os" // Добавить эту строку
 	"os/exec"
-	"strconv"
 	"strings"
+	"time" // Добавить эту строку
 
 	"github.com/briandowns/spinner"
 )
@@ -14,11 +15,11 @@ type SecurityManager struct{}
 
 // FirewallConfig содержит настройки фаервола
 type FirewallConfig struct {
-	Enabled    bool
-	SSHPort    int
-	OpenPorts  []int
-	AllowIPs   []string
-	Rules      []FirewallRule
+	Enabled   bool
+	SSHPort   int
+	OpenPorts []int
+	AllowIPs  []string
+	Rules     []FirewallRule
 }
 
 // FirewallRule представляет правило фаервола
@@ -40,7 +41,7 @@ func (sm *SecurityManager) SetupFirewall(config *FirewallConfig) error {
 	if !sm.isUFWInstalled() {
 		fmt.Println("UFW не установлен, устанавливаем...")
 		if err := sm.installUFW(); err != nil {
-			return fmt.Errorf("ошибка установки UFW: %v", err)
+			return fmt.Errorf("ошибка установки UFW: %w", err)
 		}
 	}
 
@@ -52,7 +53,7 @@ func (sm *SecurityManager) SetupFirewall(config *FirewallConfig) error {
 	// Проверяем статус UFW
 	status, err := sm.getUFWStatus()
 	if err != nil {
-		return fmt.Errorf("ошибка получения статуса UFW: %v", err)
+		return fmt.Errorf("ошибка получения статуса UFW: %w", err)
 	}
 
 	// Если фаервол уже активен, показываем правила
@@ -65,27 +66,27 @@ func (sm *SecurityManager) SetupFirewall(config *FirewallConfig) error {
 	// Сбрасываем правила если фаервол отключен
 	if strings.Contains(status, "Status: inactive") {
 		if err := sm.resetUFW(); err != nil {
-			return fmt.Errorf("ошибка сброса UFW: %v", err)
+			return fmt.Errorf("ошибка сброса UFW: %w", err)
 		}
 
 		// Настраиваем политики по умолчанию
 		if err := sm.setDefaultPolicies(); err != nil {
-			return fmt.Errorf("ошибка настройки политик: %v", err)
+			return fmt.Errorf("ошибка настройки политик: %w", err)
 		}
 
 		// Применяем правила
 		if err := sm.applyRules(config); err != nil {
-			return fmt.Errorf("ошибка применения правил: %v", err)
+			return fmt.Errorf("ошибка применения правил: %w", err)
 		}
 
 		// Включаем логирование
 		if err := sm.enableLogging(); err != nil {
-			return fmt.Errorf("ошибка включения логирования: %v", err)
+			return fmt.Errorf("ошибка включения логирования: %w", err)
 		}
 
 		// Включаем фаервол
 		if err := sm.enableUFW(); err != nil {
-			return fmt.Errorf("ошибка включения UFW: %v", err)
+			return fmt.Errorf("ошибка включения UFW: %w", err)
 		}
 	}
 
@@ -104,18 +105,18 @@ func (sm *SecurityManager) SetupFail2ban() error {
 	// Проверяем установлен ли Fail2ban
 	if !sm.isFail2banInstalled() {
 		if err := sm.installFail2ban(); err != nil {
-			return fmt.Errorf("ошибка установки Fail2ban: %v", err)
+			return fmt.Errorf("ошибка установки Fail2ban: %w", err)
 		}
 	}
 
 	// Создаем конфигурацию
 	if err := sm.createFail2banConfig(); err != nil {
-		return fmt.Errorf("ошибка создания конфигурации Fail2ban: %v", err)
+		return fmt.Errorf("ошибка создания конфигурации Fail2ban: %w", err)
 	}
 
 	// Перезапускаем службу
 	if err := sm.restartFail2ban(); err != nil {
-		return fmt.Errorf("ошибка перезапуска Fail2ban: %v", err)
+		return fmt.Errorf("ошибка перезапуска Fail2ban: %w", err)
 	}
 
 	fmt.Println("Fail2ban успешно настроен")
@@ -131,17 +132,17 @@ func (sm *SecurityManager) SetupSSH(port int, allowRoot bool, passwordAuth bool)
 
 	// Создаем резервную копию конфигурации
 	if err := sm.backupSSHConfig(); err != nil {
-		return fmt.Errorf("ошибка создания бэкапа SSH: %v", err)
+		return fmt.Errorf("ошибка создания бэкапа SSH: %w", err)
 	}
 
 	// Настраиваем SSH
 	if err := sm.configureSSH(port, allowRoot, passwordAuth); err != nil {
-		return fmt.Errorf("ошибка настройки SSH: %v", err)
+		return fmt.Errorf("ошибка настройки SSH: %w", err)
 	}
 
 	// Перезапускаем службу SSH
 	if err := sm.restartSSH(); err != nil {
-		return fmt.Errorf("ошибка перезапуска SSH: %v", err)
+		return fmt.Errorf("ошибка перезапуска SSH: %w", err)
 	}
 
 	fmt.Println("SSH успешно настроен")
@@ -158,15 +159,16 @@ func (sm *SecurityManager) isUFWInstalled() bool {
 func (sm *SecurityManager) installUFW() error {
 	pm, err := (&PackageManagerDetector{}).Detect()
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка определения менеджера пакетов: %w", err)
 	}
-	return exec.Command("sh", "-c", pm.Install+" ufw").Run()
+	cmd := fmt.Sprintf("%s ufw", pm.Install)
+	return exec.Command("sh", "-c", cmd).Run()
 }
 
 func (sm *SecurityManager) getUFWStatus() (string, error) {
 	output, err := exec.Command("ufw", "status").Output()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ошибка получения статуса UFW: %w", err)
 	}
 	return string(output), nil
 }
@@ -178,10 +180,13 @@ func (sm *SecurityManager) resetUFW() error {
 func (sm *SecurityManager) setDefaultPolicies() error {
 	// Отключаем входящие соединения по умолчанию
 	if err := exec.Command("ufw", "default", "deny", "incoming").Run(); err != nil {
-		return err
+		return fmt.Errorf("ошибка установки политики для входящих соединений: %w", err)
 	}
 	// Разрешаем исходящие соединения по умолчанию
-	return exec.Command("ufw", "default", "allow", "outgoing").Run()
+	if err := exec.Command("ufw", "default", "allow", "outgoing").Run(); err != nil {
+		return fmt.Errorf("ошибка установки политики для исходящих соединений: %w", err)
+	}
+	return nil
 }
 
 func (sm *SecurityManager) applyRules(config *FirewallConfig) error {
@@ -280,9 +285,10 @@ func (sm *SecurityManager) isFail2banInstalled() bool {
 func (sm *SecurityManager) installFail2ban() error {
 	pm, err := (&PackageManagerDetector{}).Detect()
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка определения менеджера пакетов: %w", err)
 	}
-	return exec.Command("sh", "-c", pm.Install+" fail2ban").Run()
+	cmd := fmt.Sprintf("%s fail2ban", pm.Install)
+	return exec.Command("sh", "-c", cmd).Run()
 }
 
 func (sm *SecurityManager) createFail2banConfig() error {
@@ -300,28 +306,37 @@ backend = %(sshd_backend)s
 `
 
 	configPath := "/etc/fail2ban/jail.local"
-	return os.WriteFile(configPath, []byte(config), 0644)
+	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+		return fmt.Errorf("ошибка записи конфигурации Fail2ban: %w", err)
+	}
+	return nil
 }
 
 func (sm *SecurityManager) restartFail2ban() error {
 	// Включаем автозагрузку
 	if err := exec.Command("systemctl", "enable", "fail2ban").Run(); err != nil {
-		return err
+		return fmt.Errorf("ошибка включения автозагрузки Fail2ban: %w", err)
 	}
 	// Перезапускаем службу
-	return exec.Command("systemctl", "restart", "fail2ban").Run()
+	if err := exec.Command("systemctl", "restart", "fail2ban").Run(); err != nil {
+		return fmt.Errorf("ошибка перезапуска Fail2ban: %w", err)
+	}
+	return nil
 }
 
 func (sm *SecurityManager) backupSSHConfig() error {
 	backupCmd := "cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup.$(date +%Y%m%d%H%M%S)"
-	return exec.Command("sh", "-c", backupCmd).Run()
+	if err := exec.Command("sh", "-c", backupCmd).Run(); err != nil {
+		return fmt.Errorf("ошибка создания бэкапа SSH конфигурации: %w", err)
+	}
+	return nil
 }
 
 func (sm *SecurityManager) configureSSH(port int, allowRoot, passwordAuth bool) error {
 	configPath := "/etc/ssh/sshd_config"
 	config, err := os.ReadFile(configPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка чтения SSH конфигурации: %w", err)
 	}
 
 	lines := strings.Split(string(config), "\n")
@@ -371,11 +386,17 @@ func (sm *SecurityManager) configureSSH(port int, allowRoot, passwordAuth bool) 
 
 	newLines = append(newLines, recommendedSettings...)
 
-	return os.WriteFile(configPath, []byte(strings.Join(newLines, "\n")), 0644)
+	if err := os.WriteFile(configPath, []byte(strings.Join(newLines, "\n")), 0644); err != nil {
+		return fmt.Errorf("ошибка записи SSH конфигурации: %w", err)
+	}
+	return nil
 }
 
 func (sm *SecurityManager) restartSSH() error {
-	return exec.Command("systemctl", "restart", "ssh").Run()
+	if err := exec.Command("systemctl", "restart", "ssh").Run(); err != nil {
+		return fmt.Errorf("ошибка перезапуска SSH службы: %w", err)
+	}
+	return nil
 }
 
 // CheckSecurity проверяет безопасность системы
@@ -409,7 +430,7 @@ func (sm *SecurityManager) checkOpenPorts() error {
 	cmd := "ss -tulpn | grep LISTEN"
 	output, err := exec.Command("sh", "-c", cmd).Output()
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка проверки открытых портов: %w", err)
 	}
 
 	lines := strings.Split(string(output), "\n")
@@ -426,12 +447,12 @@ func (sm *SecurityManager) checkOpenPorts() error {
 func (sm *SecurityManager) checkSecurityUpdates() error {
 	pm, err := (&PackageManagerDetector{}).Detect()
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка определения менеджера пакетов: %w", err)
 	}
 
 	updates, err := GetAvailableUpdates(pm)
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка получения обновлений: %w", err)
 	}
 
 	fmt.Printf("Доступно %d обновлений\n", len(updates))

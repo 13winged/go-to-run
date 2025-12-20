@@ -1,7 +1,10 @@
+// Package config предоставляет функциональность для работы с конфигурацией утилиты go-to-run.
+// Включает загрузку, сохранение, валидацию и слияние конфигураций.
 package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,12 +28,12 @@ type SystemConfig struct {
 
 // SecurityConfig содержит настройки безопасности
 type SecurityConfig struct {
-	SSHPort    int      `json:"ssh_port"`
-	OpenPorts  []int    `json:"open_ports"`
-	AllowIPs   []string `json:"allow_ips"`
-	EnableUFW  bool     `json:"enable_ufw"`
-	EnableFail2ban bool `json:"enable_fail2ban"`
-	FirewallRules []FirewallRule `json:"firewall_rules"`
+	SSHPort        int            `json:"ssh_port"`
+	OpenPorts      []int          `json:"open_ports"`
+	AllowIPs       []string       `json:"allow_ips"`
+	EnableUFW      bool           `json:"enable_ufw"`
+	EnableFail2ban bool           `json:"enable_fail2ban"`
+	FirewallRules  []FirewallRule `json:"firewall_rules"`
 }
 
 // FirewallRule представляет правило фаервола
@@ -65,10 +68,10 @@ func DefaultConfig() *Config {
 			Locale:   "ru_RU.UTF-8",
 		},
 		Security: SecurityConfig{
-			SSHPort:    22,
-			OpenPorts:  []int{80, 443},
-			AllowIPs:   []string{"127.0.0.1"},
-			EnableUFW:  true,
+			SSHPort:        22,
+			OpenPorts:      []int{80, 443},
+			AllowIPs:       []string{"127.0.0.1"},
+			EnableUFW:      true,
 			EnableFail2ban: true,
 			FirewallRules: []FirewallRule{
 				{Port: 22, Protocol: "tcp", Action: "allow", Comment: "SSH access"},
@@ -118,14 +121,19 @@ func DefaultConfig() *Config {
 
 // LoadConfig загружает конфигурацию из файла
 func LoadConfig(filename string) (*Config, error) {
-	data, err := os.ReadFile(filename)
+	// Проверка пути к файлу для предотвращения инъекций
+	if !filepath.IsAbs(filename) && filepath.Clean(filename) != filename {
+		return nil, fmt.Errorf("небезопасный путь к файлу: %s", filename)
+	}
+
+	data, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
-		return nil, fmt.Errorf("ошибка чтения конфигурации: %v", err)
+		return nil, fmt.Errorf("ошибка чтения конфигурации: %w", err)
 	}
 
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("ошибка парсинга конфигурации: %v", err)
+		return nil, fmt.Errorf("ошибка парсинга конфигурации: %w", err)
 	}
 
 	return &config, nil
@@ -135,11 +143,12 @@ func LoadConfig(filename string) (*Config, error) {
 func SaveConfig(config *Config, filename string) error {
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
-		return fmt.Errorf("ошибка сериализации конфигурации: %v", err)
+		return fmt.Errorf("ошибка сериализации конфигурации: %w", err)
 	}
 
-	if err := os.WriteFile(filename, data, 0644); err != nil {
-		return fmt.Errorf("ошибка записи конфигурации: %v", err)
+	// Безопасные права доступа 0600 (только владелец может читать/писать)
+	if err := os.WriteFile(filepath.Clean(filename), data, 0600); err != nil {
+		return fmt.Errorf("ошибка записи конфигурации: %w", err)
 	}
 
 	return nil
@@ -148,8 +157,9 @@ func SaveConfig(config *Config, filename string) error {
 // EnsureConfigDir создает директорию для конфигурации
 func EnsureConfigDir() (string, error) {
 	configDir := filepath.Join(os.Getenv("HOME"), ".config", "go-to-run")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания директории конфигурации: %v", err)
+	// Безопасные права доступа 0750 (владелец может читать/писать/исполнять, группа только читать/исполнять)
+	if err := os.MkdirAll(configDir, 0750); err != nil {
+		return "", fmt.Errorf("ошибка создания директории конфигурации: %w", err)
 	}
 	return configDir, nil
 }
@@ -250,12 +260,12 @@ func MergeConfigs(base, override *Config) *Config {
 // ValidateConfig проверяет конфигурацию на корректность
 func ValidateConfig(config *Config) error {
 	if config == nil {
-		return fmt.Errorf("конфигурация не может быть nil")
+		return errors.New("конфигурация не может быть nil")
 	}
 
 	// Проверка часового пояса
 	if config.System.Timezone == "" {
-		return fmt.Errorf("часовой пояс не может быть пустым")
+		return errors.New("часовой пояс не может быть пустым")
 	}
 
 	// Проверка портов
